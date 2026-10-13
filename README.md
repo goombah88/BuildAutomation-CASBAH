@@ -1,92 +1,244 @@
-# Project CASBAH
+# CASBAH
 
+CASBAH (CLL's Assisted Server Build Automated Helper) is a Django web application for requesting and automating new VM builds across the CLL environment. It replaces ad hoc manual server-build steps with a single guided form, live infrastructure validation, and background orchestration against GitLab, NetBox, vCenter, Vault, and Active Directory.
 
+This project is designed for internal operations use: a user can submit a server request, have the app validate the hostname/IP against existing records, create a GitLab build repository, provision the VM in NetBox, and monitor the Terraform/GitLab pipeline until the environment is ready.
 
-## Getting started
+## What the project does
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+CASBAH brings together a few major workflows:
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+- A web form for new server build requests
+- Site-specific validation for RCD09 and SJC17 environments
+- Live inventory lookups from vCenter and NetBox to populate dropdowns
+- Hostname and IPv4 validation against existing build history and infrastructure data
+- Automatic GitLab project/repo creation for each VM build
+- Background orchestration of Terraform plan/apply through GitLab pipelines
+- Optional firewall ticket creation in Jira for the build
+- Build status tracking and CSV export for operational review
 
-## Add your files
+## Why it exists
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+The project is effectively a production-facing web frontend for a previously manual or semi-manual build process. Instead of editing YAML files and running scripts by hand, the app centralizes the workflow:
 
+1. User requests a VM via the web form.
+2. Validation checks the name and IP before submission.
+3. The app creates or updates a `BuildRequest` record.
+4. A background task creates the GitLab build repo and configures the VM in NetBox.
+5. The GitLab pipeline monitors plan/merge/apply progression automatically.
+6. The user sees status updates and final build information in the UI.
+
+## Core architecture
+
+The application is a Django project with one main app, `builds/`.
+
+- `casbah/` contains the Django project settings and root URL routing.
+- `builds/models.py` defines `BuildRequest`, the central database model for each server build.
+- `builds/forms.py` defines the server build form and validation rules.
+- `builds/views.py` contains the form web views, validation endpoints, and status UI.
+- `builds/tasks.py` runs the background build pipeline and advances GitLab/Terraform state transitions.
+- `builds/gitlab_client.py` manages GitLab project creation, repo setup, and pipeline interactions.
+- `builds/netbox_client.py` provisions and checks VM inventory in NetBox.
+- `builds/vcenter_client.py` gathers live datacenter inventory for dropdowns.
+- `builds/vault_client.py` retrieves service credentials from Vault.
+- `builds/ad_auth.py` provides Active Directory-backed authentication.
+- `builds/yaml_builder.py` creates the YAML used for the virtual machine build definition.
+
+## Key features
+
+### Server build form
+
+The app provides a site-specific form for:
+
+- VM hostname / naming convention
+- IPv4 address and prefix
+- CPU / memory sizing
+- tenant group and tenant selection
+- datastore, cluster, resource pool, folder, and portgroup
+- template selection
+- optional firewall ticket reason
+
+This form is tailored for both `rcd09` and `sjc17` locations, with staging support for the RCD09 environment.
+
+### Infrastructure integration
+
+The project relies on live infrastructure APIs:
+
+- GitLab: create build repos, poll pipeline states, and trigger merge/apply behavior
+- NetBox: validate IPs and create VM records
+- vCenter: fetch compute clusters, datastores, resource pools, folders, and templates
+- Vault: source service credentials and support token bootstrap
+- Active Directory: authenticate authorized users before allowing app access
+
+### Background job processing
+
+The app uses `django-q2` with SQLite-backed ORM task scheduling. That lets long-running GitLab and infrastructure steps continue in the background while the user watches status updates in the web UI.
+
+### Status tracking
+
+Each build request records detailed state in the database, including:
+
+- pipeline state
+- GitLab URLs and project IDs
+- NetBox VM links
+- Jira ticket URL and errors
+- final error details
+- timestamps for build progression
+
+## Project structure
+
+```text
+.
+├── builds/                         # Main Django app
+│   ├── management/                # Custom management commands
+│   ├── migrations/                # Database migrations
+│   ├── templates/                 # HTML templates for the UI
+│   ├── tests/                     # Unit tests for app behavior
+│   ├── ad_auth.py                 # AD login backend
+│   ├── forms.py                   # Build form and validation logic
+│   ├── gitlab_client.py           # GitLab API integration
+│   ├── jira_client.py             # Jira ticket automation
+│   ├── models.py                  # BuildRequest model and state enum
+│   ├── netbox_client.py           # NetBox VM management
+│   ├── tasks.py                   # Background orchestration
+│   ├── vcenter_client.py          # vCenter inventory lookups
+│   ├── vault_client.py            # Vault credential retrieval
+│   ├── views.py                  # Request handlers and status views
+│   ├── yaml_builder.py            # YAML generation for build specs
+│   └── widgets.py                # Custom form widgets
+├── casbah/                        # Django project settings and root URL config
+├── example_files/                 # Example VM YAML files
+├── scripts/                       # Supporting scripts
+├── static/                        # Static assets
+├── templates/                     # Shared templates
+├── .gitignore
+├── db.sqlite3                    # Local SQLite database for development
+├── manage.py                     # Django management entry point
+├── requirements.txt              # Python dependencies
+├── README.md                     # Project documentation
+├── ai_prompt_revised.txt          # Design rationale and implementation notes
+└── PrepareNewBuild.log           # Local operational notes
 ```
-cd existing_repo
-git remote add origin https://gitlab.systems.cll.cloud/infrastructure-ops/project-casbah.git
-git branch -M main
-git push -uf origin main
+
+## Requirements
+
+This project is built for an internal environment and expects access to a number of platform services.
+
+### Software
+
+- Python 3.10+ (Django 6.1 is used in this repo)
+- Git
+- A local or reachable VM with network access to:
+  - GitLab
+  - NetBox
+  - vCenter
+  - Vault
+  - Active Directory / LDAP
+
+### Python dependencies
+
+Install dependencies with:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-## Integrate with your tools
+## Local configuration
 
-- [ ] [Set up project integrations](https://gitlab.systems.cll.cloud/infrastructure-ops/project-casbah/-/settings/integrations)
+This project reads several credentials from the local environment and a shared secrets file. The code expects a file at `~/.api_variables_env` with values exported in shell format.
 
-## Collaborate with your team
+Example:
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+```bash
+export VAULT_TOKEN="..."
+export EMAIL_ADDRESS="user@example.com"
+export JIRA_API_TOKEN="..."
+export VM_BUILDS_DIR="$HOME/builds"
+export AD_ALLOWED_GROUP_DN="CN=System_Administrator,OU=CLL Team,DC=cll,DC=cloud"
+```
 
-## Test and Deploy
+The app also supports encrypted Vault AppRole values for bootstrapping access, using the helper command that is referenced in the project settings and management commands.
 
-Use the built-in continuous integration in GitLab.
+## Running the app
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+1. Create the database schema:
 
-***
+```bash
+python manage.py migrate
+```
 
-# Editing this README
+2. Create an admin or local user if needed:
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+```bash
+python manage.py createsuperuser
+```
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+3. Start the background task worker:
 
-## Name
-Choose a self-explaining name for your project.
+```bash
+python manage.py qcluster
+```
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+4. Start the web app:
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+```bash
+python manage.py runserver 0.0.0.0:8000
+```
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+5. Open the app in a browser at:
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+```text
+http://localhost:8000/
+```
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+## Typical usage
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+1. Log in with your Active Directory credentials.
+2. Select the site (`rcd09` or `sjc17`).
+3. Fill in the requested VM details.
+4. Confirm that the hostname and IP are valid.
+5. Submit the request.
+6. Track the build on the status page while the app creates the GitLab repo and NetBox VM.
+7. Wait for the GitLab/Terraform pipeline to complete and mark the build as successful.
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+## Notable management commands
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+A few custom commands are included for operational validation and support:
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+```bash
+python manage.py ad_lookup
+python manage.py set_vault_approle
+python manage.py sync_local_build_repos
+```
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+These are used to validate AD configuration, bootstrap Vault AppRole secrets, and synchronize local build repository state.
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+## Security and operational notes
+
+This repository is clearly an internal operational tool, not a polished public-facing app. A few important caveats are worth noting:
+
+- `DEBUG = True` is enabled in the Django settings.
+- The app stores sensitive values in local environment and secret files rather than a hardened production secrets manager.
+- Access control depends on AD group membership and LDAP bind behavior.
+- The project assumes access to internal GitLab, NetBox, vCenter, Vault, and Jira infrastructure.
+- The app is intended for internal use by authorized staff within the CLL environment.
+
+## Testing
+
+The repo includes a Django test suite under `builds/tests/` covering the application logic for auth, forms, GitLab interactions, NetBox, vCenter, and build workflows.
+
+Example:
+
+```bash
+python manage.py test
+```
 
 ## License
-For open source projects, say how it is licensed.
+
+This repository does not currently include a `LICENSE` file, so the licensing status is unspecified at this time.
 
 ## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+
+This project is an internal automation tool for workstation/server provisioning workflows. It is functional for the targeted internal environment and is structured around real operational systems rather than generic cloud abstractions.
