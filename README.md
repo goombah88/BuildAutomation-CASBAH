@@ -1,6 +1,6 @@
 # CASBAH
 
-CASBAH (CMC's Assisted Server Build Automated Helper) is a Django web application for requesting and automating new VM builds across the CLL environment. It replaces ad hoc manual server-build steps with a single guided form, live infrastructure validation, and background orchestration against GitLab, NetBox, vCenter, Vault, and Active Directory.
+CASBAH (Chad's Assisted Server Build Automated Helper) is a Django web application for requesting and automating new VM builds across the CLL environment. It replaces ad hoc manual server-build steps with a single guided form, live infrastructure validation, and background orchestration against GitLab, NetBox, vCenter, Vault, and Active Directory.
 
 This project is designed for internal operations use: a user can submit a server request, have the app validate the hostname/IP against existing records, create a GitLab build repository, provision the VM in NetBox, and monitor the Terraform/GitLab pipeline until the environment is ready.
 
