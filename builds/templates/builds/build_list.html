@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}CASBAH &mdash; All Builds{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>All Builds</h1>
+
+    <form method="get" style="display:flex; gap:1rem; margin-bottom:1rem; align-items:end;">
+        <div>
+            <label>Site</label><br>
+            <select name="site">
+                <option value="">All</option>
+                {% for value, label in site_choices %}
+                <option value="{{ value }}" {% if value == selected_site %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Status</label><br>
+            <select name="status">
+                <option value="">All</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if value == selected_status %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Tenant</label><br>
+            <input type="text" name="tenant" value="{{ selected_tenant }}" placeholder="e.g. VMCloud Prod">
+        </div>
+        <button type="submit" class="btn">Filter</button>
+        <a class="btn secondary" href="{% url 'build_list_csv' %}?{{ request.GET.urlencode }}">Export CSV</a>
+    </form>
+
+    <table style="width:100%; border-collapse: collapse;">
+        <thead>
+            <tr style="text-align:left; border-bottom: 2px solid #d0d5dd;">
+                <th style="padding:0.5rem;">VM Name</th>
+                <th style="padding:0.5rem;">Site</th>
+                <th style="padding:0.5rem;">Tenant</th>
+                <th style="padding:0.5rem;">Status</th>
+                <th style="padding:0.5rem;">Requested By</th>
+                <th style="padding:0.5rem;">Created</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for build_request in builds %}
+            <tr style="border-bottom: 1px solid #eef0f2;">
+                <td style="padding:0.5rem;"><a href="{% url 'build_submitted' pk=build_request.pk %}">{{ build_request.vm_name }}</a></td>
+                <td style="padding:0.5rem;">{{ build_request.site|upper }}</td>
+                <td style="padding:0.5rem;">{{ build_request.tenant }}</td>
+                <td style="padding:0.5rem;">{{ build_request.get_status_display }}</td>
+                <td style="padding:0.5rem;">{{ build_request.requested_by|default:"—" }}</td>
+                <td style="padding:0.5rem;">{{ build_request.created_at|date:"Y-m-d H:i" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" style="padding:1rem; text-align:center;">No builds match these filters.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

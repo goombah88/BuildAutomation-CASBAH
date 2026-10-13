@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}CASBAH &mdash; Home{% endblock %}
+{% block content %}
+<div class="card" x-data="{ picking: false }" hx-get="{% url 'netbox_options_prefetch' %}" hx-trigger="load" hx-swap="none">
+    <h1>Project CASBAH</h1>
+    <p>
+        CASBAH automates the CLL server build process: fill out one form and CASBAH creates
+        the GitLab build repo and the matching NetBox VM record for you.
+    </p>
+
+    <div style="display:flex; gap:1rem; margin-top:1.5rem;">
+        <button class="btn" @click="picking = true">Start New Build</button>
+        <a class="btn secondary" href="{% url 'build_form_staging' %}" hx-get="{% url 'build_form_staging_options' %}" hx-trigger="mouseenter once" hx-swap="none">Build in VM Staging (RCD)</a>
+    </div>
+
+    <div
+        x-show="picking"
+        x-cloak
+        style="position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center;"
+    >
+        <div class="card" style="max-width:480px; text-align:center;">
+            <h2>Which site is this build for?</h2>
+            <div style="display:flex; gap:1rem; margin-top:1rem;">
+                <a class="btn" style="flex:1; padding:2rem 1rem;" href="{% url 'build_form' site='rcd09' %}" hx-get="{% url 'build_form_options' site='rcd09' %}" hx-trigger="mouseenter once" hx-swap="none">RCD09</a>
+                <a class="btn" style="flex:1; padding:2rem 1rem;" href="{% url 'build_form' site='sjc17' %}" hx-get="{% url 'build_form_options' site='sjc17' %}" hx-trigger="mouseenter once" hx-swap="none">SJC17</a>
+            </div>
+            <p style="margin-top:1rem;"><a href="#" @click.prevent="picking = false">Cancel</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

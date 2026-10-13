@@ -1,0 +1,50 @@
+<div id="pipeline-status-fragment"
+     {% if not pipeline_terminal %}
+     hx-get="{% url 'build_pipeline_status' pk=build_request.pk %}"
+     hx-trigger="every 5s"
+     hx-swap="outerHTML"
+     {% endif %}>
+    <h3>Build progress</h3>
+    <ol style="list-style:none; padding-left:0; margin:0;">
+        {% for step in steps %}
+        <li style="border-left:4px solid
+                {% if step.state == 'done' %}#227a3c
+                {% elif step.state == 'failed' %}#c0392b
+                {% elif step.state == 'active' %}#2f6fed
+                {% else %}#94a3b8{% endif %};
+                padding:0.25rem 0 0.25rem 1rem; margin-bottom:0.75rem;">
+            <strong>{{ forloop.counter }}. {{ step.title }}</strong>
+            &mdash;
+            {% if step.state == 'done' %}<span style="color:#227a3c;">done</span>
+            {% elif step.state == 'failed' %}<span style="color:#c0392b;">failed</span>
+            {% elif step.state == 'active' %}<span style="color:#2f6fed;">{{ step.detail }}</span>
+            {% else %}<span style="color:#94a3b8;">pending</span>
+            {% endif %}
+            {% if step.state != 'pending' and step.detail and step.state != 'active' %}
+                <br><span>{{ step.detail }}</span>
+            {% endif %}
+            {% if step.error %}
+                <br><span style="color:#c0392b;">{{ step.error }}</span>
+            {% endif %}
+            {% if step.links %}
+                {% for label, url in step.links %}
+                    <br><a href="{{ url }}" target="_blank">{{ label }}</a>
+                {% endfor %}
+            {% endif %}
+            {% if step.web_url %}
+                <br><a href="{{ step.web_url }}" target="_blank">view on GitLab</a>
+            {% endif %}
+            {% if step.jobs %}
+            <ul>
+                {% for job in step.jobs %}
+                <li>{{ job.name }} ({{ job.stage }}): {{ job.status }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ol>
+    {% if not pipeline_terminal %}
+        <p><em>Fetching status&hellip;</em></p>
+    {% endif %}
+</div>

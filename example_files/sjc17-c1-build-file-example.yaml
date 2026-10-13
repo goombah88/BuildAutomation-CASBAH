@@ -1,0 +1,54 @@
+# MANDATORY environment or secret vars:
+# These are inherited from the infrastructure-as-code/vms gitlab group
+# netbox_api_token ('export TF_VAR_netbox_api_token=<netbox token>'). Inherited variable (NETBOX_TOKEN)
+# vault_token ('export TF_VAR_vault_token=<vault token>').  Inherited variable (VAULT_TOKEN)
+
+vsphere_server: "sjc17-c1-vm-vcenter-01.cll.cloud"
+
+## Variables to configure the placing of VM, which resource pool use
+vsphere_datacenter: "sjc17"
+vsphere_datastore: "infra-01"
+vsphere_compute_cluster: "sjc17-infrastructure"
+vsphere_resource_pool: "utilities"
+vsphere_vm_folder: "infrastructure"
+
+## Networking
+vsphere_portgroup_name: "sjc17-infra-servers"
+vsphere_vm_primary_vnic: "ens192"
+#vsphere_vm_ipv4_gateway: default will be first host on network (e.g., 10.192.1.1)
+vsphere_vm_ipv4_address: "10.196.1.41"
+vsphere_vm_ipv4_prefix_length: "24"
+vsphere_vm_dns_server_list:
+  - "10.196.1.111"
+  - "10.196.1.112"
+
+## VM template
+vsphere_vm_template: "sjc17-c1-vmt-ubuntu2404-260505-1037"
+
+## VM resources and naming
+vsphere_vm_name: "sjc17-c1-vm-nettools-01"
+vsphere_vm_num_cpus: 8
+#vsphere_vm_num_cores_per_socket: default inherited from vm template, 4
+vsphere_vm_memory: 32768
+
+## Extra disks added to VM
+vsphere_vm_data_disks:
+  # data disk for docker image/volume storage at /var/lib/containerd
+  containerd_data_disk:
+    disk_size: 50
+  # data disk for /var/lib/docker for user configuration files
+  docker_data_disk:
+    disk_size: 20
+  # Data disk for all users home directories storage
+  home_directory_disk:
+    disk_size: 50
+
+
+## Extra interfaces added to VM
+#vsphere_vm_extra_nics:
+#  <label_1>:
+#    portgroup: "rcd09-infra-nfs" # optional, default is used same as main interface
+#    adapter_type: "vmxnet3" # options "e1000","e1000e","sriov", default is used same as main interface
+#  <label_2>:
+#    portgroup: "rcd09-infra-nfs" # optional, default is used same as main interface
+#    adapter_type: "vmxnet3" # options "e1000","e1000e","sriov", default is used same as main interface

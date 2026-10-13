@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}CASBAH &mdash; Build Status{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Build status</h1>
+    <p><strong>{{ build_request.vm_name }}</strong> ({{ build_request.site|upper }})</p>
+    {% if build_request.firewall_ticket_requested %}
+    <p>
+        Firewall ticket:
+        {% if build_request.firewall_ticket_url %}
+        <a href="{{ build_request.firewall_ticket_url }}" target="_blank">{{ build_request.firewall_ticket_url }}</a>
+        {% elif build_request.firewall_ticket_error %}
+        <span style="color:#c0392b; font-weight:bold;">&#10060; Not filed: {{ build_request.firewall_ticket_error }}</span>
+        {% else %}
+        <span style="color:#94a3b8;">pending</span>
+        {% endif %}
+    </p>
+    {% endif %}
+    {% include "builds/_pipeline_status_fragment.html" %}
+    <p><a href="{% url 'landing' %}">&larr; Back to landing page</a></p>
+</div>
+{% endblock %}

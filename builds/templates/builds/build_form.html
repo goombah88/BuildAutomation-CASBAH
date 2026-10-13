@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}CASBAH &mdash; New Build ({{ site|upper }}){% endblock %}
+{% block content %}
+<h1>Server Build Form &mdash; {{ site|upper }}{% if staging %} (VM Staging){% endif %}</h1>
+
+<div style="margin-bottom:1rem;">
+    <button type="button" class="btn secondary" onclick="document.querySelectorAll('#build-form details').forEach(d => d.open = true)">Expand All</button>
+    <button type="button" class="btn secondary" onclick="document.querySelectorAll('#build-form details').forEach(d => d.open = false)">Collapse All</button>
+</div>
+
+<form
+    method="post"
+    class="two-col"
+    id="build-form"
+    novalidate
+    x-data="{ showModal: false, submitting: false }"
+    @reset="showModal = false; submitting = false"
+    @submit="submitting = true"
+    @pageshow.window="if ($event.persisted) { submitting = false; showModal = false }"
+>
+    {% csrf_token %}
+    <div>
+        <div hx-get="{{ options_url }}" hx-trigger="load" hx-swap="none"></div>
+        <details open>
+            <summary>Identity &amp; Networking</summary>
+            <fieldset>
+                <legend>Hostname / IP</legend>
+                <p>
+                    <label>{{ form.vsphere_vm_name.label_tag }}</label><br>
+                    {{ form.vsphere_vm_name }}
+                    <span id="vm_name_feedback"></span>
+                    {% for error in form.vsphere_vm_name.errors %}<div style="color:#c0392b; font-weight:bold;">&#10060; {{ error }}</div>{% endfor %}
+                </p>
+                <p>
+                    <label>{{ form.vsphere_vm_ipv4_address.label_tag }}</label><br>
+                    {{ form.vsphere_vm_ipv4_address }}
+                    <span id="ip_feedback"></span>
+                    {% for error in form.vsphere_vm_ipv4_address.errors %}<div style="color:#c0392b; font-weight:bold;">&#10060; {{ error }}</div>{% endfor %}
+                </p>
+                <p>
+                    <label>{{ form.vsphere_vm_ipv4_prefix_length.label_tag }}</label><br>
+                    {{ form.vsphere_vm_ipv4_prefix_length }}
+                </p>
+                <p>
+                    <label>{{ form.vsphere_vm_primary_vnic.label_tag }}</label><br>
+                    {{ form.vsphere_vm_primary_vnic }}
+                </p>
+                <p>
+                    <label>DNS Servers (display only)</label><br>
+                    {% for dns in dns_servers %}<input type="text" value="{{ dns }}" disabled><br>{% endfor %}
+                </p>
+            </fieldset>
+        </details>
+
+        <details open>
+            <summary>Sizing</summary>
+            <fieldset
+                x-data="{ cpus: {{ form.vsphere_vm_num_cpus.value|default:2 }}, mem: {{ form.vsphere_vm_memory.value|default:4 }} }"
+                @reset="cpus = {{ form.vsphere_vm_num_cpus.value|default:2 }}; mem = {{ form.vsphere_vm_memory.value|default:4 }}"
+            >
+                <legend>CPU / Memory</legend>
+                <p>
+                    <label>{{ form.vsphere_vm_num_cpus.label }}: <span x-text="cpus"></span></label><br>
+                    <input type="range" name="vsphere_vm_num_cpus" min="2" max="24" step="2" x-model="cpus">
+                </p>
+                <p>
+                    <label>{{ form.vsphere_vm_memory.label }}: <span x-text="mem"></span></label><br>
+                    <input type="range" name="vsphere_vm_memory" min="4" max="64" step="2" x-model="mem">
+                </p>
+            </fieldset>
+        </details>
+
+        <details open>
+            <summary>Tenant &amp; Placement</summary>
+            <fieldset>
+                <legend>Tenant</legend>
+                <p>
+                    <label>{{ form.tenant_group.label_tag }}</label><br>
+                    <span id="field_tenant_group">{{ form.tenant_group }}</span>
+                </p>
+                <p>
+                    <label>{{ form.tenant.label_tag }}</label><br>
+                    {{ form.tenant }}
+                </p>
+                <p>
+                    <label>{{ form.tenant_other.label_tag }}</label><br>
+                    <span id="field_tenant_other">{{ form.tenant_other }}</span>
+                </p>
+                <p>
+                    <label>{{ form.vsphere_datastore.label_tag }}</label><br>
+                    <span id="field_vsphere_datastore">{{ form.vsphere_datastore }}</span>
+                </p>
+                <p>
+                    <label>{{ form.vsphere_compute_cluster.label_tag }}</label><br>
+                    <span id="field_vsphere_compute_cluster">{{ form.vsphere_compute_cluster }}</span>
+                </p>
+                <p>
+                    <label>{{ form.vsphere_resource_pool.label_tag }}</label><br>
+                    <span id="field_vsphere_resource_pool">{{ form.vsphere_resource_pool }}</span>
+                </p>
+                <p>
+                    <label>{{ form.vsphere_vm_folder.label_tag }}</label><br>
+                    <span id="field_vsphere_vm_folder">{{ form.vsphere_vm_folder }}</span>
+                </p>
+                <p>
+                    <label>{{ form.vsphere_portgroup_name.label_tag }}</label><br>
+                    <span id="field_vsphere_portgroup_name">{{ form.vsphere_portgroup_name }}</span>
+                </p>
+            </fieldset>
+        </details>
+
+        <details open>
+            <summary>Server &amp; Template</summary>
+            <fieldset>
+                <legend>vCenter / Template</legend>
+                <p><label>vCenter Server (display only)</label><br><input type="text" value="{{ vsphere_server }}" disabled></p>
+                <p><label>Datacenter (display only)</label><br><input type="text" value="{{ vsphere_datacenter }}" disabled></p>
+                <p>
+                    <label>{{ form.vsphere_vm_template.label_tag }}
+                        <span title="Build default — you can change this in vCenter/NetBox after the VM is created if needed">&#9432;</span>
+                    </label><br>
+                    <span id="field_vsphere_vm_template">{{ form.vsphere_vm_template }}</span>
+                </p>
+            </fieldset>
+        </details>
+
+        <details open>
+            <summary>Firewall Ticket</summary>
+            <fieldset
+                x-data="{ firewallTicketRequested: '{{ form.firewall_ticket_requested.value|default:'yes' }}' }"
+                @reset="firewallTicketRequested = '{{ form.firewall_ticket_requested.value|default:'yes' }}'"
+            >
+                <legend>Standard-build firewall ticket</legend>
+                <p>
+                    <label>{{ form.firewall_ticket_requested.label_tag }}</label><br>
+                    {{ form.firewall_ticket_requested }}
+                </p>
+                <p>
+                    <label>{{ form.firewall_ticket_reason.label_tag }}</label><br>
+                    {{ form.firewall_ticket_reason }}
+                    {% for error in form.firewall_ticket_reason.errors %}<div style="color:#c0392b; font-weight:bold;">&#10060; {{ error }}</div>{% endfor %}
+                    <br>
+                    <small>
+                        Filed automatically in Jira (LABS project) once the build is submitted.
+                    </small>
+                </p>
+            </fieldset>
+        </details>
+
+        <p style="margin-top:1.5rem;">
+            <button
+                type="button"
+                class="btn"
+                hx-post="{% url 'build_preview' site=site %}"
+                hx-include="closest form"
+                hx-target="#confirm-modal-body"
+                hx-swap="innerHTML"
+                @click="showModal = true"
+            >Review &amp; Submit</button>
+            <button type="reset" class="btn secondary">Clear Form</button>
+        </p>
+    </div>
+
+    <div
+        x-show="showModal"
+        x-cloak
+        style="position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; z-index:50;"
+    >
+        <div class="card" style="max-width:640px; width:90%; max-height:80vh; overflow-y:auto;">
+            <h2>Confirm Build</h2>
+            <div id="confirm-modal-body">Loading&hellip;</div>
+        </div>
+    </div>
+
+    <aside class="card status-panel">
+        <h3>Info</h3>
+        <p>Fill out the form and submit to fork the GitLab build repo and create the NetBox VM record.</p>
+        {% if staging %}<p><em>VM Staging shortcut applied — cluster/resource pool/portgroup pre-filled, still editable.</em></p>{% endif %}
+        <p><em>This form doesn't reset after submitting, so you can build multiple servers back-to-back &mdash; click <strong>Clear Form</strong> if you want to start over.</em></p>
+        <p><em>Need a different site, or to switch in/out of VM Staging? Click <strong>Home</strong> instead of using this form.</em></p>
+    </aside>
+</form>
+{% endblock %}
+

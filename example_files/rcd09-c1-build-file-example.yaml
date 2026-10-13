@@ -1,0 +1,64 @@
+# MANDATORY environment or secret vars:
+# These are inherited from the infrastructure-as-code/vms gitlab group
+# netbox_api_token ('export TF_VAR_netbox_api_token=<netbox token>'). Inherited variable (NETBOX_TOKEN)
+# vault_token ('export TF_VAR_vault_token=<vault token>').  Inherited variable (VAULT_TOKEN)
+
+# Defaults are commented below.  They can be overridden.
+
+vsphere_server: "rcd09-c1-vm-vcenter-01.cll.cloud"
+#vsphere_user: "service_vcenter@cll.cloud"
+#vsphere_password: default is to retrieve from Vault
+
+#vault_server: "https://vault.systems.cll.cloud"
+#netbox_server: "http://netbox.systems.cll.cloud"
+
+## Variables to configure the placing of VM, which resource pool use
+vsphere_datacenter: "rcd09"
+vsphere_datastore: "infra-01"
+vsphere_compute_cluster: "rcd09-infrastructure"
+vsphere_resource_pool: "backup"
+vsphere_vm_folder: "infrastructure"
+
+## Networking
+vsphere_portgroup_name: "/rcd09/network/rcd09-infra-vm-sw/rcd09-infra-servers"
+# note that the primary interface will be 'ens192' for Ubuntu 24.04 (from the template)
+#vsphere_vm_ipv4_gateway: default will be first host on network (e.g., 10.192.1.1)
+vsphere_vm_ipv4_address: "10.192.1.231"
+vsphere_vm_primary_vnic: "ens192"
+vsphere_vm_ipv4_prefix_length: "24"
+vsphere_vm_dns_server_list:
+  - "10.192.1.111"
+  - "10.192.1.112"
+
+## VM template
+# Note that if you use the 'generic' template name (e.g., rcd09-c1-vmt-ubuntu2404), then the most recent 'stable'
+# version of the template will be used.  Stable numbers are kept as part of the context data for the template in NetBox.
+vsphere_vm_template: "rcd09-c1-vmt-ubuntu2404-260721-1206"
+
+#vsphere_vm_template_admin_username: "ubuntu"
+#vsphere_vm_template_admin_password: default is to retrieve from Vault
+
+## VM resources and naming
+vsphere_vm_name: "rcd09-c1-vm-oxidized-01"
+
+#vsphere_vm_num_cpus: default inherited from vm template, 4
+#vsphere_vm_num_cores_per_socket: default inherited from vm template, 4
+#vsphere_vm_memory: default inherited from vm template, 8192 MB
+vsphere_vm_num_cpus: 2
+vsphere_vm_memory: 4096
+
+## Extra disks added to VM
+#vsphere_vm_data_disks:
+#  <label_1>:
+#    disk_size: <GBs>
+#  <label_2>:
+#    disk_size: <GBs>
+
+## Extra interfaces added to VM
+#vsphere_vm_extra_nics:
+#  ens224:
+#    portgroup: "rcd09-infra-nfs" # optional, default is used same as main interface
+#    adapter_type: "vmxnet3" # options "e1000","e1000e","sriov", default is used same as main interface
+#  ens256:
+#    portgroup: "rcd09-infra-nfs" # optional, default is used same as main interface
+#    adapter_type: "vmxnet3" # options "e1000","e1000e","sriov", default is used same as main interface

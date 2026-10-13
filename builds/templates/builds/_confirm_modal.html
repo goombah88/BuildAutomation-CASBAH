@@ -1,0 +1,14 @@
+{% if capacity_warning %}
+<div style="background:#fef3c7; border:1px solid #f59e0b; padding:0.75rem; border-radius:6px; margin-bottom:1rem;">
+    &#9888; {{ capacity_warning }}
+</div>
+{% endif %}
+<p>Review the build yaml that will be generated below, then confirm to create the GitLab repo and NetBox VM record.</p>
+<pre style="background:#0f172a; color:#e2e8f0; padding:1rem; border-radius:6px; overflow-x:auto; font-size:0.85rem;">{{ yaml_text }}</pre>
+<div style="display:flex; gap:1rem; margin-top:1rem;">
+    <button type="submit" form="build-form" class="btn" :disabled="submitting">
+        <span x-show="!submitting">Confirm &amp; Create Build</span>
+        <span x-show="submitting" x-cloak>Creating&hellip;</span>
+    </button>
+    <button type="button" class="btn secondary" @click="showModal = false">Cancel</button>
+</div>
